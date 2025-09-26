@@ -9,9 +9,10 @@ option(SKIA_STATIC "Build static Skia" ON)
 option(SKIA_PNG "Build Skia with png support" ON)
 option(SKIA_WEBP "Build Skia with webp support" OFF)
 option(SKIA_PDF "Build Skia with PDF support" OFF)
-# option(SKIA_XML "Build Skia with xml support" OFF)
+option(SKIA_XML "Build Skia with xml support" ON)
 option(SKIA_GLFW "Build Skia with glfw support" OFF)
 option(SKIA_TOOLS_WINDOW "Build Skia tools window support" ON)
+option(SKIA_DUILIB_X "Build Skia with duilib-x support" OFF)
 
 if(SKIA_STATIC AND SKIA_SHARED)
   message(ERROR "You cna only use one of SKIA_STATIC, SKIA_STATIC")
@@ -138,6 +139,7 @@ set(skia_sources
     src/core/SkDocument.cpp
     src/core/SkDraw.cpp
     src/core/SkDrawBase.cpp
+    src/core/SkMaskFilterBase.cpp
     src/core/SkDrawShadowInfo.cpp
     src/core/SkDraw_atlas.cpp
     src/core/SkDraw_text.cpp
@@ -226,12 +228,14 @@ set(skia_sources
     src/core/SkRecordDraw.cpp
     src/core/SkRecordOpts.cpp
     src/core/SkRecordedDrawable.cpp
+    src/core/SkRecordCanvas.cpp
     #src/core/SkRecorder.cpp
     src/core/SkRecords.cpp
     src/core/SkRect.cpp
     src/core/SkRegion.cpp
     src/core/SkRegion_path.cpp
     src/core/SkResourceCache.cpp
+    src/core/SkSynchronizedResourceCache.cpp
     src/core/SkRuntimeBlender.cpp
     src/core/SkRuntimeEffect.cpp
     src/core/SkSLTypeShared.cpp
@@ -274,6 +278,8 @@ set(skia_sources
     src/core/SkYUVAPixmaps.cpp
     src/core/SkYUVMath.cpp
     src/core/SkYUVPlanesCache.cpp
+    src/core/SkCPURecorder.cpp
+    src/core/SkCPUContext.cpp
     
     src/effects/Sk1DPathEffect.cpp
     src/effects/Sk2DPathEffect.cpp
@@ -557,6 +563,7 @@ set(skia_sources
     src/gpu/ganesh/tessellate/PathTessellator.cpp
     src/gpu/ganesh/tessellate/StrokeTessellator.cpp
     src/gpu/ganesh/text/GrAtlasManager.cpp
+    src/gpu/ganesh/text/GaneshVertexFiller.cpp
   
     src/gpu/AtlasTypes.cpp
     src/gpu/Blend.cpp
@@ -619,6 +626,7 @@ set(skia_sources
     src/gpu/graphite/Resource.cpp
     src/gpu/graphite/ResourceCache.cpp
     src/gpu/graphite/ResourceProvider.cpp
+    src/gpu/graphite/Recorder.cpp
     src/gpu/graphite/RuntimeEffectDictionary.cpp
     src/gpu/graphite/Sampler.cpp
     src/gpu/graphite/ScratchResourceManager.cpp
@@ -1007,6 +1015,7 @@ if(WIN32)
               src/utils/win/SkIStream.cpp
               src/utils/win/SkWGL_win.cpp
               src/gpu/ganesh/gl/win/GrGLMakeNativeInterface_win.cpp
+              src/gpu/ganesh/gl/win/GrGLMakeWinInterface.cpp
               )
 endif()
 if(UNIX AND NOT MINGW)
@@ -1114,6 +1123,11 @@ if(SKIA_WEBP)
 endif()
 
 if(SKIA_PNG OR SKIA_PDF)
+if(SKIA_DUILIB_X)
+	# use Duilib third-party/zlib
+	target_include_directories(skia PRIVATE "../zlib")
+	#target_link_libraries(skia PRIVATE duilib-zlib)
+else()
   FetchContent_Declare(
     zlib
     GIT_REPOSITORY https://github.com/madler/zlib.git
@@ -1129,8 +1143,14 @@ if(SKIA_PNG OR SKIA_PDF)
     ${zlib_BINARY_DIR}
   )
 endif()
+endif()
 
 if(SKIA_PNG)
+if(SKIA_DUILIB_X)
+	# use Duilib third-party/libpng
+	target_include_directories(skia PRIVATE "../libpng" ${CMAKE_CURRENT_BINARY_DIR}/../libpng)
+	#target_link_libraries(skia PRIVATE  png_static)
+else()
   FetchContent_Declare(
     libpng
     GIT_REPOSITORY https://github.com/glennrp/libpng.git
@@ -1147,6 +1167,7 @@ if(SKIA_PNG)
     ${libpng_SOURCE_DIR}
     ${libpng_BINARY_DIR}
   )
+endif()
 endif()
 
 if(SKIA_GLFW)
@@ -1169,7 +1190,8 @@ if(SKIA_XML)
   FetchContent_Declare(
     expat
     GIT_REPOSITORY https://github.com/libexpat/libexpat.git
-    GIT_TAG master
+    GIT_TAG R_2_7_2
+    SOURCE_SUBDIR  expat
   )
 
   FetchContent_MakeAvailable(expat)
@@ -1203,31 +1225,23 @@ target_include_directories(skia PRIVATE
   
   
 if (WIN32)
+  FetchContent_Declare(
+	  dlfcn-win32
+	  GIT_REPOSITORY https://github.com/dlfcn-win32/dlfcn-win32.git
+	  GIT_TAG v1.3.0
+	)
 
-  #ExternalProject_Add(
-  #dlfcn-win32
-  ##URL https://github.com/dlfcn-win32/dlfcn-win32/archive/refs/tags/v1.3.0.tar.gz
-  ##URL_HASH SHA256=24C69D43DDC9243FD2639A07495A7E0714278E8D3D0E124AFDBAB892DBB4A92D
-  #GIT_REPOSITORY https://github.com/dlfcn-win32/dlfcn-win32.git
-  #GIT_TAG v1.3.0
-  #SOURCE_DIR     ${CMAKE_SOURCE_DIR}/third_party/dlfcn-win32-1.3.0
-  #GIT_PROGRESS      ON
-  #LOG_DOWNLOAD      ON
-  #UPDATE_DISCONNECTED ON
-  ##DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-  #CMAKE_ARGS
-  #  -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-  #  -DBUILD_SHARED_LIBS=OFF
-  #CONFIGURE_COMMAND ""
-  #BUILD_COMMAND ""
-  #INSTALL_COMMAND ""
-  #)
 
-  add_subdirectory(third_party/dlfcn-win32-1.3.0)
+  FetchContent_MakeAvailable(dlfcn-win32)
+
+  target_include_directories(skia PRIVATE 
+    ${dlfcn-win32_SOURCE_DIR}/include
+  )
+  
   target_link_libraries(skia PRIVATE freetype dl)
   target_include_directories(skia PRIVATE 
     ${freetype_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/third_party/dlfcn-win32-1.3.0/src
+    ${dlfcn-win32_SOURCE_DIR}/src
   )
 elseif (LINUX)
   target_link_libraries(skia PRIVATE freetype)
@@ -1247,3 +1261,11 @@ elseif (BSD)
 endif()
 
 target_include_directories(skia SYSTEM PUBLIC .)
+
+set_target_properties(skia PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../../lib"
+  ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_LIST_DIR}/../../lib/Debug"
+  ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../../lib/Release"
+)
+
+add_subdirectory(modules)
