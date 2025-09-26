@@ -50,8 +50,10 @@ if(TARGET harfbuzz AND SKSHAPER_USE_HARFBUZZ)
     target_link_libraries(skshaper PUBLIC harfbuzz)
 endif()
 
+if(SKIA_DUILIB_X)
 set_target_properties(skshaper PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../../../../lib"
   ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_LIST_DIR}/../../../../lib/Debug"
   ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../../../../lib/Release"
 )
+endif()
